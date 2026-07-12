@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-ink-950: #0a0a0b;
+  --color-ink-900: #121214;
+  --color-ink-800: #1c1c1f;
+  --color-ink-700: #2a2a2e;
+  --color-ink-600: #3f3f46;
+  --color-ink-500: #71717a;
+  --color-ink-400: #9a9aa2;
+  --color-ink-300: #c4c4cb;
+  --color-ink-200: #e4e4e8;
+  --color-ink-100: #f0f0f2;
+  --color-ink-50: #fafafa;
+
+  --color-accent-600: #4f46e5;
+  --color-accent-500: #6d5bf5;
+  --color-accent-400: #8b7bff;
+  --color-accent-300: #b3a6ff;
+  --color-accent-100: #e8e4ff;
+  --color-accent-50: #f3f1ff;
+  --color-accent-glow: #a78bfa;
+
+  --color-mint-500: #10b981;
+  --color-amber-500: #f59e0b;
+
+  --shadow-soft: 0 1px 2px rgba(10,10,11,0.04), 0 8px 24px -8px rgba(10,10,11,0.08);
+  --shadow-card: 0 1px 3px rgba(10,10,11,0.06), 0 20px 40px -16px rgba(10,10,11,0.12);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-ink-50 text-ink-900 antialiased;
+    font-family: var(--font-sans);
+  }
+  ::selection {
+    background: var(--color-accent-400);
+    color: white;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+  .text-gradient {
+    background: linear-gradient(115deg, #0a0a0b 10%, #4f46e5 55%, #8b7bff 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .grain-surface {
+    background-image: radial-gradient(circle at 1px 1px, rgba(10,10,11,0.06) 1px, transparent 0);
+    background-size: 18px 18px;
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .thin-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+  .thin-scrollbar::-webkit-scrollbar-thumb { background: var(--color-ink-200); border-radius: 999px; }
+  .thin-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--color-ink-300); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
