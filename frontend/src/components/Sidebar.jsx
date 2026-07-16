@@ -24,8 +24,13 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user } = useApp();
+  const { user, logout } = useApp();
   const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   const content = (
     <div className="flex h-full flex-col">
@@ -65,7 +70,7 @@ export default function Sidebar() {
           <p className="truncate text-xs text-ink-500">{user.email}</p>
         </div>
         <button
-          onClick={() => navigate("/login")}
+          onClick={handleLogout}
           className="text-ink-400 hover:text-ink-800"
           title="Log out"
         >

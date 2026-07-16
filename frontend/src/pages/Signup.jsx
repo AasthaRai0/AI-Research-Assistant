@@ -1,17 +1,39 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sparkles, Mail, Lock, User, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Sparkles, Mail, Lock, User, Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
+import { useApp } from "../context/AppContext";
 
 export default function Signup() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { signup } = useApp();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => navigate("/dashboard"), 700);
+    try {
+      await signup(name, email, password);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(
+        err.response?.data?.detail || "Couldn't create your account. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,7 +57,12 @@ export default function Signup() {
         </div>
 
         <div className="rounded-2xl border border-ink-200 bg-white p-7 shadow-card">
-          <button className="mb-5 flex w-full items-center justify-center gap-2.5 rounded-xl border border-ink-200 py-2.5 text-sm font-medium text-ink-800 transition-colors hover:bg-ink-50">
+          <button
+            type="button"
+            title="Google sign-in isn't wired up in this demo backend yet"
+            className="mb-5 flex w-full items-center justify-center gap-2.5 rounded-xl border border-ink-200 py-2.5 text-sm font-medium text-ink-400 cursor-not-allowed"
+            disabled
+          >
             <GoogleIcon />
             Continue with Google
           </button>
@@ -46,6 +73,17 @@ export default function Signup() {
             <div className="h-px flex-1 bg-ink-200" />
           </div>
 
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700"
+            >
+              <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+              <span>{error}</span>
+            </motion.div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="mb-1.5 block text-xs font-medium text-ink-600">Full name</label>
@@ -54,6 +92,8 @@ export default function Signup() {
                 <input
                   type="text"
                   required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   placeholder="Alex Rivera"
                   className="w-full rounded-xl border border-ink-200 py-2.5 pl-10 pr-3.5 text-sm text-ink-900 outline-none transition-colors focus:border-accent-500 focus:ring-2 focus:ring-accent-100"
                 />
@@ -67,6 +107,8 @@ export default function Signup() {
                 <input
                   type="email"
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   className="w-full rounded-xl border border-ink-200 py-2.5 pl-10 pr-3.5 text-sm text-ink-900 outline-none transition-colors focus:border-accent-500 focus:ring-2 focus:ring-accent-100"
                 />
@@ -80,6 +122,9 @@ export default function Signup() {
                 <input
                   type={showPw ? "text" : "password"}
                   required
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 8 characters"
                   className="w-full rounded-xl border border-ink-200 py-2.5 pl-10 pr-10 text-sm text-ink-900 outline-none transition-colors focus:border-accent-500 focus:ring-2 focus:ring-accent-100"
                 />

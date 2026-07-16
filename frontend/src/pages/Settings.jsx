@@ -1,22 +1,32 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { User, Mail, Check, Sun, Moon, Save } from "lucide-react";
+import { User, Mail, Check, Sun, Moon, Save, AlertCircle } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
 import { useApp } from "../context/AppContext";
-import { aiModels } from "../lib/mockData";
+import { aiModels } from "../lib/config";
 
 export default function Settings() {
-  const { user, setUser, theme, setTheme } = useApp();
+  const { user, updateProfile, theme, setTheme } = useApp();
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
-  const [model, setModel] = useState("lumen-pro");
+  const [model, setModel] = useState("default");
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    setUser({ name, email });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1800);
+    setError("");
+    setSaving(true);
+    try {
+      await updateProfile({ name, email });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1800);
+    } catch (err) {
+      setError(err.response?.data?.detail || "Couldn't save changes. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -66,13 +76,20 @@ export default function Settings() {
                   </div>
                 </div>
               </div>
+              {error && (
+                <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700">
+                  <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="flex items-center gap-2 rounded-xl bg-ink-950 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-ink-800"
+                  disabled={saving}
+                  className="flex items-center gap-2 rounded-xl bg-ink-950 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-ink-800 disabled:opacity-60"
                 >
                   {saved ? <Check size={15} /> : <Save size={15} />}
-                  {saved ? "Saved" : "Save changes"}
+                  {saving ? "Saving..." : saved ? "Saved" : "Save changes"}
                 </button>
               </div>
             </form>

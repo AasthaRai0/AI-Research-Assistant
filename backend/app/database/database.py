@@ -10,15 +10,9 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.config.settings import settings
 
-# SQLite require karta hai check_same_thread=False jab multi-threading use ho rahi ho (FastAPI me common hai)
-if settings.DATABASE_URL.startswith("sqlite"):
-    engine = create_engine(
-        settings.DATABASE_URL, 
-        connect_args={"check_same_thread": False}
-    )
-else:
-    # PostgreSQL ke liye normal engine configurations
-    engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
+# `pool_pre_ping` avoids "server closed the connection unexpectedly" errors
+# on long-lived connections (common with PostgreSQL behind a load balancer).
+engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

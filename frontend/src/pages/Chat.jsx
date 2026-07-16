@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
@@ -8,38 +9,29 @@ import {
   Sparkles,
   Plus,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
 import ChatMessage from "../components/ChatMessage";
 import { useApp } from "../context/AppContext";
 
-const CANNED_RESPONSES = [
-  {
-    content:
-      "Based on the retrieved passages, here's what I found:\n\nThe document describes this concept as a core building block, with supporting evidence drawn from the surrounding context. Here's a quick illustration:\n\n```python\ndef retrieve(query, top_k=5):\n    embedding = embed(query)\n    return vector_store.search(embedding, top_k)\n```\n\nLet me know if you'd like me to go deeper on any part of this.",
-  },
-  {
-    content:
-      "According to your uploaded document, the key idea centers on **combining retrieval with generation** — pulling the most relevant chunks before the model composes an answer. This keeps responses grounded and verifiable.",
-  },
-  {
-    content:
-      "Here's a summary of the relevant section:\n\n- The main argument is presented early, with supporting data following.\n- A notable caveat is mentioned regarding edge cases.\n- The conclusion reinforces the original claim with additional citations.",
-  },
-];
-
 export default function Chat() {
-  const { documents, conversations, addMessageToConversation, createConversation } = useApp();
+  const { documents, chatHistory, askQuestion } = useApp();
+  const location = useLocation();
   const readyDocs = documents.filter((d) => d.status === "ready");
 
-  const [selectedDocId, setSelectedDocId] = useState(readyDocs[0]?.id || null);
-  const [activeConvId, setActiveConvId] = useState(null);
+  const [selectedDocId, setSelectedDocId] = useState(
+    location.state?.documentId || readyDocs[0]?.id || null
+  );
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [error, setError] = useState("");
   const scrollRef = useRef(null);
 
-  const activeConv = conversations.find((c) => c.id === activeConvId);
-  const messages = activeConv?.messages || [];
+  useEffect(() => {
+    if (!selectedDocId && readyDocs.length > 0) setSelectedDocId(readyDocs[0].id);
+  }, [readyDocs, selectedDocId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -47,43 +39,51 @@ export default function Chat() {
     }
   }, [messages, isTyping]);
 
+  // Rebuild the visible thread from chat history whenever the selected
+  // document changes — the backend stores one Q&A pair per entry, so each
+  // history row becomes a user message + an assistant message.
   useEffect(() => {
-    // pick most recent conversation for the selected document, if any
-    const existing = conversations.find((c) => c.docId === selectedDocId);
-    setActiveConvId(existing?.id || null);
-  }, [selectedDocId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleSend = () => {
-    if (!input.trim() || !selectedDocId) return;
-    const doc = documents.find((d) => d.id === selectedDocId);
-
-    let convId = activeConvId;
-    if (!convId) {
-      convId = createConversation(selectedDocId, input.slice(0, 40));
-      setActiveConvId(convId);
+    if (!selectedDocId) {
+      setMessages([]);
+      return;
     }
+    const entries = chatHistory
+      .filter((c) => c.document_id === selectedDocId)
+      .slice()
+      .reverse(); // oldest first
 
-    addMessageToConversation(convId, {
-      id: `m-${Date.now()}`,
-      role: "user",
-      content: input.trim(),
-    });
+    const thread = entries.flatMap((c) => [
+      { id: `${c.id}-q`, role: "user", content: c.question },
+      { id: `${c.id}-a`, role: "assistant", content: c.answer, sources: c.sources },
+    ]);
+    setMessages(thread);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDocId]);
+
+  const handleSend = async () => {
+    if (!input.trim() || !selectedDocId || isTyping) return;
+
+    const question = input.trim();
+    const userMessage = { id: `local-${Date.now()}`, role: "user", content: question };
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    setError("");
     setIsTyping(true);
 
-    setTimeout(() => {
-      const canned = CANNED_RESPONSES[Math.floor(Math.random() * CANNED_RESPONSES.length)];
-      addMessageToConversation(convId, {
-        id: `m-${Date.now() + 1}`,
-        role: "assistant",
-        content: canned.content,
-        sources: [
-          { doc: doc?.name || "document.pdf", page: Math.floor(Math.random() * 40) + 1 },
-          { doc: doc?.name || "document.pdf", page: Math.floor(Math.random() * 40) + 1 },
-        ],
-      });
+    try {
+      const { answer, sources } = await askQuestion(selectedDocId, question);
+      setMessages((prev) => [
+        ...prev,
+        { id: `local-${Date.now() + 1}`, role: "assistant", content: answer, sources },
+      ]);
+    } catch (err) {
+      setError(err.response?.data?.detail || "Something went wrong answering that question.");
+      // Roll back the optimistic user message so it doesn't look like it was silently ignored.
+      setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+      setInput(question);
+    } finally {
       setIsTyping(false);
-    }, 1600);
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -92,6 +92,8 @@ export default function Chat() {
       handleSend();
     }
   };
+
+  const selectedDoc = documents.find((d) => d.id === selectedDocId);
 
   return (
     <DashboardLayout>
@@ -122,13 +124,10 @@ export default function Chat() {
           </div>
           <div className="border-t border-ink-100 p-3">
             <button
-              onClick={() => {
-                setActiveConvId(null);
-                setInput("");
-              }}
+              onClick={() => setMessages([])}
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-ink-200 py-2 text-xs font-medium text-ink-700 hover:bg-ink-50"
             >
-              <Plus size={14} /> New conversation
+              <Plus size={14} /> Clear thread
             </button>
           </div>
         </aside>
@@ -142,9 +141,9 @@ export default function Chat() {
               </span>
               <div>
                 <p className="text-sm font-medium text-ink-900">
-                  {documents.find((d) => d.id === selectedDocId)?.name || "Select a document"}
+                  {selectedDoc?.name || "Select a document"}
                 </p>
-                <p className="text-xs text-ink-400">Lumen Pro · Grounded answers</p>
+                <p className="text-xs text-ink-400">Grounded answers with page citations</p>
               </div>
             </div>
           </div>
@@ -155,10 +154,14 @@ export default function Chat() {
                 <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-50 text-accent-600">
                   <Sparkles size={22} />
                 </span>
-                <p className="font-display text-lg font-semibold text-ink-900">Ask anything about this document</p>
-                <p className="mt-1 max-w-sm text-sm text-ink-500">
-                  Try: "What is gradient descent?" or "Summarize the key findings."
+                <p className="font-display text-lg font-semibold text-ink-900">
+                  {selectedDocId ? "Ask anything about this document" : "Select a document to start chatting"}
                 </p>
+                {selectedDocId && (
+                  <p className="mt-1 max-w-sm text-sm text-ink-500">
+                    Try: "What is gradient descent?" or "Summarize the key findings."
+                  </p>
+                )}
               </div>
             )}
 
@@ -178,6 +181,12 @@ export default function Chat() {
 
           {/* Input box */}
           <div className="border-t border-ink-200 bg-white px-5 py-4">
+            {error && (
+              <div className="mx-auto mb-3 flex max-w-3xl items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700">
+                <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
             <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-ink-200 bg-ink-50 p-2 shadow-soft focus-within:border-accent-400">
               <button className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-ink-400 hover:bg-ink-100 hover:text-ink-700">
                 <Paperclip size={17} />
@@ -197,7 +206,7 @@ export default function Chat() {
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={handleSend}
-                disabled={!input.trim() || !selectedDocId}
+                disabled={!input.trim() || !selectedDocId || isTyping}
                 className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-ink-950 text-white transition-opacity disabled:opacity-30"
               >
                 <Send size={15} />

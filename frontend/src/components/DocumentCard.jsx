@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { FileText, MoreVertical, CheckCircle2, Loader2, Trash2, MessageSquare } from "lucide-react";
+import { FileText, MoreVertical, CheckCircle2, AlertCircle, Trash2, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { Spinner } from "./Loader";
 
@@ -15,6 +15,7 @@ export default function DocumentCard({ doc, onDelete, onChat, layout = "grid" })
   const [menuOpen, setMenuOpen] = useState(false);
   const status = STATUS_MAP[doc.status] || STATUS_MAP.ready;
   const isReady = doc.status === "ready";
+  const isError = doc.status === "error";
 
   return (
     <motion.div
@@ -33,14 +34,14 @@ export default function DocumentCard({ doc, onDelete, onChat, layout = "grid" })
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-ink-900">{doc.name}</p>
           <p className="text-xs text-ink-500">
-            {doc.pages} pages · {doc.size}
+            {doc.pages > 0 ? `${doc.pages} pages` : "Processing..."}
           </p>
         </div>
       </div>
 
       <div className={`flex items-center gap-2 ${layout === "grid" ? "justify-between mt-1" : ""}`}>
-        <div className={`flex items-center gap-1.5 text-xs font-medium ${status.color}`}>
-          {isReady ? <CheckCircle2 size={14} /> : <Spinner size={13} />}
+        <div className={`flex items-center gap-1.5 text-xs font-medium ${status.color}`} title={isError ? doc.errorMessage : undefined}>
+          {isReady ? <CheckCircle2 size={14} /> : isError ? <AlertCircle size={14} /> : <Spinner size={13} />}
           <span>{status.label}</span>
         </div>
 

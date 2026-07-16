@@ -3,17 +3,36 @@ import { useNavigate } from "react-router-dom";
 import { FileText, MessageSquare, UploadCloud, Clock, ArrowRight, ArrowUpRight } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
 import { useApp } from "../context/AppContext";
-import { activityFeed, formatRelativeDate } from "../lib/mockData";
+import { formatRelativeDate } from "../lib/format";
 
 export default function Dashboard() {
-  const { documents, conversations, totalQueries, user } = useApp();
+  const { documents, chatHistory, totalQueries, user } = useApp();
   const navigate = useNavigate();
 
   const stats = [
     { label: "Documents uploaded", value: documents.length, icon: FileText },
     { label: "Queries asked", value: totalQueries, icon: MessageSquare },
-    { label: "Conversations", value: conversations.length, icon: Clock },
+    { label: "Ready to chat", value: documents.filter((d) => d.status === "ready").length, icon: Clock },
   ];
+
+  // Build a real recent-activity feed by merging document uploads and chat
+  // questions, sorted newest-first — no mock data.
+  const activity = [
+    ...documents.map((d) => ({
+      id: `doc-${d.id}`,
+      type: "upload",
+      label: `Uploaded ${d.name}`,
+      time: d.uploadedAt,
+    })),
+    ...chatHistory.map((c) => ({
+      id: `chat-${c.id}`,
+      type: "chat",
+      label: `Asked: "${c.question.length > 60 ? c.question.slice(0, 60) + "…" : c.question}"`,
+      time: c.created_at,
+    })),
+  ]
+    .sort((a, b) => new Date(b.time) - new Date(a.time))
+    .slice(0, 6);
 
   return (
     <DashboardLayout>
@@ -71,7 +90,12 @@ export default function Dashboard() {
                 <h2 className="font-display text-base font-semibold text-ink-950">Recent activity</h2>
               </div>
               <div className="space-y-1">
-                {activityFeed.map((a) => (
+                {activity.length === 0 && (
+                  <p className="px-2 py-6 text-center text-sm text-ink-400">
+                    No activity yet — upload a document to get started.
+                  </p>
+                )}
+                {activity.map((a) => (
                   <div key={a.id} className="flex items-center gap-3 rounded-xl px-2 py-2.5 hover:bg-ink-50">
                     <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-ink-100 text-ink-500">
                       {a.type === "upload" ? <UploadCloud size={14} /> : <MessageSquare size={14} />}
@@ -79,7 +103,7 @@ export default function Dashboard() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm text-ink-800">{a.label}</p>
                     </div>
-                    <span className="flex-shrink-0 text-xs text-ink-400">{a.time}</span>
+                    <span className="flex-shrink-0 text-xs text-ink-400">{formatRelativeDate(a.time)}</span>
                   </div>
                 ))}
               </div>
@@ -101,7 +125,7 @@ export default function Dashboard() {
                 {documents.slice(0, 4).map((d) => (
                   <button
                     key={d.id}
-                    onClick={() => navigate("/chat")}
+                    onClick={() => navigate("/chat", { state: { documentId: d.id } })}
                     className="group flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-ink-50"
                   >
                     <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-accent-50 text-accent-600">

@@ -360,21 +360,6 @@ pip install -r requirements.txt
 ```
 
 
-Create `.env` file:
-
-
-```env
-OPENAI_API_KEY=your_api_key
-
-DATABASE_URL=postgresql://username:password@localhost/database_name
-
-SECRET_KEY=your_secret_key
-
-VECTOR_DB_PATH="./chroma"
-
-```
-
-
 Run backend:
 
 
@@ -446,19 +431,6 @@ http://localhost:5173
 POST /auth/signup
 ```
 
-
-Request:
-
-```json
-{
-"name":"Aastha",
-"email":"user@gmail.com",
-"password":"password123"
-}
-```
-
-
----
 
 ### Login User
 

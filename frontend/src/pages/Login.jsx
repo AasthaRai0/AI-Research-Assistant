@@ -1,17 +1,32 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sparkles, Mail, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Sparkles, Mail, Lock, Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
+import { useApp } from "../context/AppContext";
 
 export default function Login() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { login } = useApp();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
-    setTimeout(() => navigate("/dashboard"), 700);
+    try {
+      await login(email, password);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(
+        err.response?.data?.detail || "Couldn't log in. Check your email and password and try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,7 +50,12 @@ export default function Login() {
         </div>
 
         <div className="rounded-2xl border border-ink-200 bg-white p-7 shadow-card">
-          <button className="mb-5 flex w-full items-center justify-center gap-2.5 rounded-xl border border-ink-200 py-2.5 text-sm font-medium text-ink-800 transition-colors hover:bg-ink-50">
+          <button
+            type="button"
+            title="Google sign-in isn't wired up in this demo backend yet"
+            className="mb-5 flex w-full items-center justify-center gap-2.5 rounded-xl border border-ink-200 py-2.5 text-sm font-medium text-ink-400 cursor-not-allowed"
+            disabled
+          >
             <GoogleIcon />
             Continue with Google
           </button>
@@ -46,6 +66,17 @@ export default function Login() {
             <div className="h-px flex-1 bg-ink-200" />
           </div>
 
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700"
+            >
+              <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+              <span>{error}</span>
+            </motion.div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="mb-1.5 block text-xs font-medium text-ink-600">Email</label>
@@ -54,6 +85,8 @@ export default function Login() {
                 <input
                   type="email"
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   className="w-full rounded-xl border border-ink-200 py-2.5 pl-10 pr-3.5 text-sm text-ink-900 outline-none transition-colors focus:border-accent-500 focus:ring-2 focus:ring-accent-100"
                 />
@@ -63,15 +96,14 @@ export default function Login() {
             <div>
               <div className="mb-1.5 flex items-center justify-between">
                 <label className="block text-xs font-medium text-ink-600">Password</label>
-                <a href="#" className="text-xs font-medium text-accent-600 hover:text-accent-700">
-                  Forgot?
-                </a>
               </div>
               <div className="relative">
                 <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
                 <input
                   type={showPw ? "text" : "password"}
                   required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full rounded-xl border border-ink-200 py-2.5 pl-10 pr-10 text-sm text-ink-900 outline-none transition-colors focus:border-accent-500 focus:ring-2 focus:ring-accent-100"
                 />

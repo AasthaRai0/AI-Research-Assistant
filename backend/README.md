@@ -17,7 +17,7 @@ processing → chat → history → delete) before delivery.
 | Chunking | LangChain `RecursiveCharacterTextSplitter` |
 | Embeddings | Sentence-Transformers (local, default) or OpenAI (swappable) |
 | Vector store | ChromaDB (persisted to disk, one collection per document) |
-| LLM | OpenAI (default) or HuggingFace (swappable) |
+| LLM | GroqAI |
 | Deployment | Docker + docker-compose |
 
 ## Project structure
@@ -108,6 +108,7 @@ All routes except `/health`, `/auth/signup`, and `/auth/login` require
 | POST | `/auth/signup` | Create account, returns JWT |
 | POST | `/auth/login` | Log in, returns JWT |
 | GET | `/users/me` | Current user profile |
+| PATCH | `/users/me` | Update current user's name/email |
 | POST | `/documents/upload` | Upload a PDF (multipart `file`), processes in background |
 | GET | `/documents` | List the current user's documents |
 | GET | `/documents/{id}` | Poll a document's processing status |
